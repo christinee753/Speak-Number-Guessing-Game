@@ -19,13 +19,23 @@ if (!window.SpeechRecognition) {
 } else {
   const recognition = new window.SpeechRecognition();
   let gameOver = false;
+  let isListening = false;
 
   recognition.continuous = false;
   recognition.interimResults = false;
   recognition.lang = 'en-US';
 
-  // Start recognition
-  recognition.start();
+  // Start listening to the user
+  function startListening() {
+    if (!gameOver && !isListening) {
+      try {
+        recognition.start();
+        isListening = true;
+      } catch (error) {
+        console.log('Could not start recognition:', error);
+      }
+    }
+  }
 
   // Capture what the user says
   function onSpeak(event) {
@@ -35,21 +45,27 @@ if (!window.SpeechRecognition) {
 
     console.log('You said:', msg);
 
+    // Display the recognized speech
     writeMessage(msg);
+
+    // Check the spoken number
     checkNumber(msg);
   }
 
   recognition.addEventListener('result', onSpeak);
 
-  // Restart listening after each guess
+  // Track when recognition stops
   recognition.addEventListener('end', () => {
+    isListening = false;
+
     if (!gameOver) {
-      try {
-        recognition.start();
-      } catch (error) {
-        console.log('Recognition could not restart:', error);
-      }
+      startListening();
     }
+  });
+
+  recognition.addEventListener('error', (event) => {
+    isListening = false;
+    console.log('Speech recognition error:', event.error);
   });
 
   // Display what the user says
@@ -70,7 +86,7 @@ if (!window.SpeechRecognition) {
   function checkNumber(msg) {
     let num = Number(msg);
 
-    // Update the value of num if it's a single-digit number
+    // Convert spoken single-digit numbers into numbers
     if (msg === 'one' || msg === 'won') {
       num = 1;
     } else if (msg === 'two') {
@@ -92,18 +108,14 @@ if (!window.SpeechRecognition) {
     }
 
     // Check if the spoken content is a valid number
-    if (Number.isNaN(num)) {
-      const div = document.createElement('div');
-      div.textContent = 'That is not a valid number';
-      msgEl.append(div);
+    if (Number.isNaN(num) || msg === '') {
+      showMessage('That is not a valid number');
       return;
     }
 
     // Check if the number is in range
     if (num < 1 || num > 100) {
-      const div = document.createElement('div');
-      div.textContent = 'Number must be between 1 and 100';
-      msgEl.append(div);
+      showMessage('Number must be between 1 and 100');
       return;
     }
 
@@ -126,13 +138,19 @@ if (!window.SpeechRecognition) {
 
       msgEl.append(h2, button);
     } else if (num > randomNum) {
-      const div = document.createElement('div');
-      div.textContent = 'GO LOWER';
-      msgEl.append(div);
+      showMessage('GO LOWER');
     } else {
-      const div = document.createElement('div');
-      div.textContent = 'GO HIGHER';
-      msgEl.append(div);
+      showMessage('GO HIGHER');
     }
   }
+
+  // Display feedback
+  function showMessage(message) {
+    const div = document.createElement('div');
+    div.textContent = message;
+    msgEl.append(div);
+  }
+
+  // Start the game
+  startListening();
 }
