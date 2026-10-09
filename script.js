@@ -1,3 +1,4 @@
+
 const msgEl = document.getElementById('msg');
 
 // Generate random number
@@ -8,29 +9,130 @@ function getRandomNumber() {
 const randomNum = getRandomNumber();
 console.log('Number:', randomNum);
 
+// Set up speech recognition
 window.SpeechRecognition =
   window.SpeechRecognition || window.webkitSpeechRecognition;
 
-let recognition = new window.SpeechRecognition();
+if (!window.SpeechRecognition) {
+  msgEl.textContent =
+    'Speech recognition is not supported. Please use Google Chrome.';
+} else {
+  const recognition = new window.SpeechRecognition();
+  let gameOver = false;
 
-// Start recognition and game
-recognition.start();
+  recognition.continuous = false;
+  recognition.interimResults = false;
+  recognition.lang = 'en-US';
 
-// Capture user speak
-function onSpeak(event) {
-  const msg = event.results[0][0].transcript;  // You can log the event to view the structure of the data
-  writeMessage(msg);
-}
+  // Start recognition
+  recognition.start();
 
-// Speak result
-recognition.addEventListener('result', onSpeak);
+  // Capture what the user says
+  function onSpeak(event) {
+    const msg = event.results[0][0].transcript
+      .trim()
+      .toLowerCase();
 
-// See in the DOM what the user has spoken
-function writeMessage(msg) {
+    console.log('You said:', msg);
+
+    writeMessage(msg);
+    checkNumber(msg);
+  }
+
+  recognition.addEventListener('result', onSpeak);
+
+  // Restart listening after each guess
+  recognition.addEventListener('end', () => {
+    if (!gameOver) {
+      try {
+        recognition.start();
+      } catch (error) {
+        console.log('Recognition could not restart:', error);
+      }
+    }
+  });
+
+  // Display what the user says
+  function writeMessage(msg) {
+    msgEl.innerHTML = '';
+
     const div = document.createElement('div');
-    div.textContent = 'You said: ';
+    div.textContent = 'You said:';
+
     const span = document.createElement('span');
     span.classList.add('box');
     span.textContent = msg;
+
     msgEl.append(div, span);
+  }
+
+  // Check msg against the secret number
+  function checkNumber(msg) {
+    let num = Number(msg);
+
+    // Update the value of num if it's a single-digit number
+    if (msg === 'one' || msg === 'won') {
+      num = 1;
+    } else if (msg === 'two') {
+      num = 2;
+    } else if (msg === 'three') {
+      num = 3;
+    } else if (msg === 'four') {
+      num = 4;
+    } else if (msg === 'five') {
+      num = 5;
+    } else if (msg === 'six') {
+      num = 6;
+    } else if (msg === 'seven') {
+      num = 7;
+    } else if (msg === 'eight') {
+      num = 8;
+    } else if (msg === 'nine') {
+      num = 9;
+    }
+
+    // Check if the spoken content is a valid number
+    if (Number.isNaN(num)) {
+      const div = document.createElement('div');
+      div.textContent = 'That is not a valid number';
+      msgEl.append(div);
+      return;
+    }
+
+    // Check if the number is in range
+    if (num < 1 || num > 100) {
+      const div = document.createElement('div');
+      div.textContent = 'Number must be between 1 and 100';
+      msgEl.append(div);
+      return;
+    }
+
+    // Check the guess against the secret number
+    if (num === randomNum) {
+      gameOver = true;
+
+      const h2 = document.createElement('h2');
+      h2.textContent =
+        `Congrats! You have guessed the number! It was ${num}`;
+
+      const button = document.createElement('button');
+      button.classList.add('play-again');
+      button.id = 'play-again';
+      button.textContent = 'Play Again';
+
+      button.addEventListener('click', () => {
+        window.location.reload();
+      });
+
+      msgEl.append(h2, button);
+    } else if (num > randomNum) {
+      const div = document.createElement('div');
+      div.textContent = 'GO LOWER';
+      msgEl.append(div);
+    } else {
+      const div = document.createElement('div');
+      div.textContent = 'GO HIGHER';
+      msgEl.append(div);
+    }
+  }
 }
